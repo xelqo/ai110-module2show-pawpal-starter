@@ -1,0 +1,173 @@
+"""
+Quick Reference: app.py to pawpal_system.py Connection
+
+IMPORT STATEMENT (line 2 of app.py):
+┌─────────────────────────────────────────────────────────────────┐
+│ from pawpal_system import Owner, Pet, Task, Constraints,        │
+│                          Scheduler                               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+         Brings these 5 classes into app.py:
+         
+         • Owner          - Pet owner with contact info
+         • Pet            - Individual pet with species & age
+         • Task           - Single care activity
+         • Constraints    - Environmental limitations
+         • Scheduler      - Schedule orchestrator
+
+
+USER CLICKS "Generate Schedule" BUTTON:
+┌──────────────────┐
+│ User inputs data │ ← Owner name, Pet name, Tasks
+│   in Streamlit   │
+└────────┬─────────┘
+         │
+         ↓
+┌──────────────────────────────────────┐
+│ app.py creates instances:            │
+│ • owner = Owner(name=owner_name...) │
+│ • pet = Pet(name=pet_name...)        │
+│ • owner.add_pet(pet)                 │
+│ • for each task: Task(...), add it   │
+│ • constraints = Constraints()        │
+└────────┬─────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────┐
+│ app.py calls pawpal_system.py:       │
+│ scheduler = Scheduler(owner,         │
+│             constraints)             │
+│ schedule =                           │
+│   scheduler.generate_optimal_schedul │
+│   e("2025-03-29")                    │
+└────────┬─────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────┐
+│ pawpal_system.py returns:            │
+│ • schedule (with organized events)   │
+│ • suggestions for optimization       │
+│ • wellbeing score                    │
+│ • duration totals                    │
+└────────┬─────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────┐
+│ app.py displays results:             │
+│ • st.markdown(task_summary)          │
+│ • st.table(schedule_events)          │
+│ • st.metric(wellbeing_score)         │
+│ • st.info(suggestions)               │
+└──────────────────────────────────────┘
+
+
+KEY VARIABLES & RELATIONSHIPS:
+
+owner = Owner(...)
+  └── owner.pets = [pet1, pet2, ...]
+      └── pet = Pet(...)
+          └── pet.tasks = [task1, task2, ...]
+              └── task = Task(...)
+                  └── task.priority = "high"|"medium"|"low"
+                  └── task.duration_minutes = 30
+                  └── task.time = "09:00"
+
+constraints = Constraints(...)
+  └── constraints.available_exercise_hours = [("08:00", "20:00")]
+  └── constraints.weather_conditions = ["Clear"]
+
+scheduler = Scheduler(owner, constraints)
+  └── scheduler.schedule = Schedule(...)
+      └── schedule.events = [event1, event2, ...]
+          └── event = ScheduleEvent(...)
+              └── event.get_duration() → 30 (minutes)
+
+
+WORKFLOW IN CODE:
+
+# Step 1: Get user input from Streamlit form
+owner_name = st.text_input(...)           # "Jordan"
+pet_name = st.text_input(...)             # "Mochi"
+task_title = st.text_input(...)           # "Morning walk"
+duration = st.number_input(...)           # 20 (minutes)
+priority = st.selectbox(...)              # "high"
+
+# Step 2: Create backend objects
+owner = Owner(name=owner_name, ...)
+pet = Pet(name=pet_name, ...)
+owner.add_pet(pet)
+
+task = Task(
+    description=task_title,
+    duration_minutes=duration,
+    priority=priority
+)
+pet.add_task(task)
+
+# Step 3: Set constraints
+constraints = Constraints()
+constraints.set_available_exercise_hours([("08:00", "20:00")])
+
+# Step 4: Create scheduler
+scheduler = Scheduler(owner, constraints)
+
+# Step 5: Generate schedule
+schedule = scheduler.generate_optimal_schedule("2025-03-29")
+
+# Step 6: Display results
+st.markdown(scheduler.get_task_summary())
+for event in schedule.get_events():
+    st.write(f"{event.start_time}: {event.task_name}")
+
+
+COMMON METHODS CALLED FROM APP:
+
+From Owner:
+  • owner.add_pet(pet)
+  • owner.get_pet_count()
+  • owner.get_all_tasks()
+
+From Pet:
+  • pet.add_task(task)
+  • pet.get_tasks()
+  • pet.get_incomplete_tasks()
+
+From Task:
+  • task.mark_complete()
+  • task.mark_incomplete()
+  • task.is_complete()
+
+From Constraints:
+  • constraints.set_city(...)
+  • constraints.set_climate(...)
+  • constraints.set_available_exercise_hours(...)
+
+From Scheduler:
+  • scheduler.generate_optimal_schedule(date)
+  • scheduler.get_task_summary()
+  • scheduler.get_all_tasks()
+  • scheduler.get_suggestions()
+  • scheduler.mark_task_complete(...)
+  • scheduler.export_schedule(format)
+
+From Schedule:
+  • schedule.get_events()
+  • schedule.get_total_duration()
+  • schedule.get_wellbeing_score()
+
+
+VALIDATION & ERROR HANDLING:
+
+Before creating objects, app.py checks:
+  if not owner_name:
+      st.error("Please enter owner name")
+  elif not pet_name:
+      st.error("Please enter pet name")
+  elif not st.session_state.tasks:
+      st.error("Please add at least one task")
+  else:
+      try:
+          # create objects and generate schedule
+      except Exception as e:
+          st.error(f"Error: {str(e)}")
+"""

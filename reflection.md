@@ -29,6 +29,22 @@ I had a empty sketon with a lot of the functions being just passed but after goi
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+### Tradeoff: Exact Time Matching vs. Overlapping Duration Detection
+
+The conflict detection algorithm uses `is_conflicting()` which checks if two events have overlapping durations. This is more sophisticated than checking exact start times, but it still makes a simplifying assumption: **it does not account for transition time between tasks**.
+
+**The tradeoff:**
+- **What we do:** Check if event end_time <= other_event start_time (no overlap = no conflict)
+- **What we don't do:** Add buffer time (e.g., 5 minutes to transition between tasks or locations)
+
+**Why it's reasonable:**
+1. **Simplicity:** For a pet owner with a single location (home), most tasks don't require travel time
+2. **User control:** The owner can manually add buffer tasks if needed ("transition time", "travel to park")
+3. **Task duration accuracy:** The 30-minute "Morning Walk" already includes realistic time for the activity
+4. **Functionality:** We prevent actual scheduling collisions (two tasks at 07:00-07:30 and 07:15-08:00), which is the critical case
+
+**Trade-off decision:** We chose correctness for the most common case (no overlaps) over edge cases (transition time). In production, we could add an optional "buffer_minutes" parameter to tasks or a global setting for travel time.
+
 ---
 
 ## 3. AI Collaboration

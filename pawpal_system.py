@@ -645,7 +645,15 @@ class Scheduler:
         return len(self.conflicts) == 0
 
     def check_conflicts(self) -> List[str]:
-        """Check for conflicts in the current schedule."""
+        """
+        Check for conflicts in the current schedule with detailed warnings.
+        
+        Detects overlapping task durations (not just exact time matches) and returns
+        a list of descriptive conflict warnings.
+        
+        Returns:
+            List of conflict warning messages describing overlapping tasks.
+        """
         if not self.schedule:
             return []
         
@@ -653,7 +661,11 @@ class Scheduler:
         for i, event1 in enumerate(self.schedule.events):
             for event2 in self.schedule.events[i+1:]:
                 if event1.is_conflicting(event2):
-                    conflicts.append(f"{event1.task_name} conflicts with {event2.task_name}")
+                    conflict_msg = (
+                        f"⚠️  CONFLICT: {event1.task_name} ({event1.start_time}-{event1.end_time}) "
+                        f"overlaps with {event2.task_name} ({event2.start_time}-{event2.end_time})"
+                    )
+                    conflicts.append(conflict_msg)
         return conflicts
 
     def optimize_for_wellbeing(self) -> Schedule:
@@ -702,7 +714,21 @@ class Scheduler:
         return self.schedule
 
     def mark_task_complete(self, pet_name: str, task_description: str) -> bool:
-        """Mark a task as complete for a specific pet."""
+        """
+        Mark a task as complete for a specific pet.
+        
+        If the task is recurring (daily or weekly), automatically creates a new task
+        for the next occurrence.
+        
+        Args:
+            pet_name: Name of the pet.
+            task_description: Description of the task to mark complete.
+        
+        Returns:
+            True if task was found and marked complete, False otherwise.
+        """
+        from datetime import timedelta, datetime
+        
         pet = self.owner.get_pet_by_name(pet_name)
         if not pet:
             return False
@@ -710,7 +736,27 @@ class Scheduler:
         for task in pet.get_tasks():
             if task.description == task_description:
                 task.mark_complete()
+                
+                # Auto-create next occurrence for recurring tasks
+                if task.frequency in ["daily", "weekly"]:
+                    # Calculate days to add
+                    days_to_add = 1 if task.frequency == "daily" else 7
+                    
+                    # Create new task for next occurrence
+                    next_task = Task(
+                        description=task.description,
+                        time=task.time,
+                        frequency=task.frequency,
+                        duration_minutes=task.duration_minutes,
+                        priority=task.priority,
+                        pet_id=task.pet_id
+                    )
+                    
+                    pet.add_task(next_task)
+                    return True
+                
                 return True
+        
         return False
 
     def mark_task_incomplete(self, pet_name: str, task_description: str) -> bool:
@@ -797,6 +843,59 @@ class Scheduler:
             print("\n💡 SUGGESTIONS:\n")
             for suggestion in suggestions:
                 print(f"  • {suggestion}\n")
+
+    def sort_tasks_by_time(self, tasks: Optional[List[Task]] = None) -> List[Task]:
+        """
+        Sort tasks by their time attribute in HH:MM format.
+        
+        Args:
+            tasks: List of tasks to sort. If None, sorts all tasks.
+        
+        Returns:
+            List of tasks sorted by time (earliest first).
+        """
+        task_list = tasks if tasks is not None else self.get_all_tasks()
+        
+        def time_to_minutes(time_str: str) -> int:
+            """Convert HH:MM time format to minutes since midnight."""
+            try:
+                hours, minutes = map(int, time_str.split(':'))
+                return hours * 60 + minutes
+            except (ValueError, IndexError):
+                return 0
+        
+        return sorted(task_list, key=lambda t: time_to_minutes(t.time))
+
+    def filter_tasks_by_status(self, completed: bool = False) -> List[Task]:
+        """
+        Filter tasks by completion status across all pets.
+        
+        Args:
+            completed: If True, return only completed tasks. If False, return only incomplete tasks.
+        
+        Returns:
+            List of tasks matching the completion status.
+        """
+        all_tasks = self.get_all_tasks()
+        if completed:
+            return [task for task in all_tasks if task.is_complete()]
+        else:
+            return [task for task in all_tasks if not task.is_complete()]
+
+    def filter_tasks_by_pet(self, pet_name: str) -> List[Task]:
+        """
+        Filter tasks by pet name.
+        
+        Args:
+            pet_name: Name of the pet to get tasks for.
+        
+        Returns:
+            List of tasks for the specified pet, or empty list if pet not found.
+        """
+        pet = self.owner.get_pet_by_name(pet_name)
+        if pet:
+            return pet.get_tasks()
+        return []
 
     def _get_pet_name_from_task(self, task: Task) -> str:
         """Helper to find which pet a task belongs to."""

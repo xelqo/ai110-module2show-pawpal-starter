@@ -313,6 +313,123 @@ def main():
     print(f"Number of Events: {len(schedule.get_events())}")
     
     # ========================================================================
+    # STEP 10: Smart Algorithm Testing - Sorting Tasks by Time
+    # ========================================================================
+    print("\n" + "="*70)
+    print("🧠 SMART ALGORITHM #1: SORTING TASKS BY TIME")
+    print("="*70)
+    
+    print("\n📋 All tasks (out of order):")
+    all_tasks = scheduler.get_all_tasks()
+    for task in all_tasks:
+        print(f"   • {task}")
+    
+    print("\n📋 All tasks (sorted by time):")
+    sorted_tasks = scheduler.sort_tasks_by_time()
+    for task in sorted_tasks:
+        print(f"   • {task.time} - {task.description} ({task.priority})")
+    
+    # ========================================================================
+    # STEP 11: Smart Algorithm Testing - Filtering by Status
+    # ========================================================================
+    print("\n" + "="*70)
+    print("🧠 SMART ALGORITHM #2: FILTERING TASKS BY STATUS")
+    print("="*70)
+    
+    incomplete = scheduler.filter_tasks_by_status(completed=False)
+    completed = scheduler.filter_tasks_by_status(completed=True)
+    
+    print(f"\n📋 Incomplete Tasks ({len(incomplete)}):")
+    for task in incomplete:
+        print(f"   • {task.description} at {task.time} ({task.frequency})")
+    
+    print(f"\n✅ Completed Tasks ({len(completed)}):")
+    for task in completed:
+        print(f"   • {task.description} at {task.time} ({task.frequency})")
+    
+    # ========================================================================
+    # STEP 12: Smart Algorithm Testing - Filtering by Pet
+    # ========================================================================
+    print("\n" + "="*70)
+    print("🧠 SMART ALGORITHM #3: FILTERING TASKS BY PET")
+    print("="*70)
+    
+    for pet in owner.get_pets():
+        pet_tasks = scheduler.filter_tasks_by_pet(pet.name)
+        print(f"\n🐾 {pet.name}'s tasks ({len(pet_tasks)}):")
+        for task in pet_tasks:
+            status = "✓" if task.is_complete() else "○"
+            print(f"   [{status}] {task.description} at {task.time} ({task.priority})")
+    
+    # ========================================================================
+    # STEP 13: Smart Algorithm Testing - Recurring Tasks
+    # ========================================================================
+    print("\n" + "="*70)
+    print("🧠 SMART ALGORITHM #4: RECURRING TASK AUTOMATION")
+    print("="*70)
+    
+    # Get a daily task to test recurring behavior
+    daily_tasks = [t for t in scheduler.get_all_tasks() if t.frequency == "daily"]
+    if daily_tasks:
+        test_task = daily_tasks[0]
+        pet_with_task = None
+        for pet in owner.get_pets():
+            if test_task in pet.get_tasks():
+                pet_with_task = pet
+                break
+        
+        if pet_with_task:
+            initial_count = len(pet_with_task.get_tasks())
+            print(f"\n📅 Testing recurring task: '{test_task.description}'")
+            print(f"   • Pet: {pet_with_task.name}")
+            print(f"   • Frequency: {test_task.frequency}")
+            print(f"   • Tasks before completion: {initial_count}")
+            
+            # Mark the task complete (should auto-create next occurrence)
+            scheduler.mark_task_complete(pet_with_task.name, test_task.description)
+            
+            final_count = len(pet_with_task.get_tasks())
+            print(f"   • Tasks after marking complete: {final_count}")
+            print(f"   ✓ New recurring task auto-created: {final_count > initial_count}")
+            
+            # Show the new task
+            if final_count > initial_count:
+                new_tasks = [t for t in pet_with_task.get_tasks() if not t.is_complete()]
+                if new_tasks:
+                    latest = new_tasks[-1]
+                    print(f"   • Next occurrence: {latest.description} at {latest.time}")
+    
+    # ========================================================================
+    # STEP 14: Smart Algorithm Testing - Conflict Detection
+    # ========================================================================
+    print("\n" + "="*70)
+    print("🧠 SMART ALGORITHM #5: CONFLICT DETECTION")
+    print("="*70)
+    
+    # Check for conflicts in the generated schedule
+    conflicts = scheduler.check_conflicts()
+    
+    print(f"\n🔍 Checking for overlapping tasks in schedule...")
+    print(f"   Schedule has {len(schedule.get_events())} events")
+    
+    if conflicts:
+        print(f"\n   ⚠️  Found {len(conflicts)} conflict(s):")
+        for conflict in conflicts:
+            print(f"   {conflict}")
+    else:
+        print(f"\n   ✅ No conflicts detected! Schedule is optimized.")
+    
+    # Verify conflict detection works by checking if times overlap
+    print(f"\n   Validating conflict detection logic:")
+    sample_events = schedule.get_events()[:2] if len(schedule.get_events()) >= 2 else []
+    if len(sample_events) >= 2:
+        event1, event2 = sample_events[0], sample_events[1]
+        is_conflict = event1.is_conflicting(event2)
+        print(f"   • Event 1: {event1.start_time}-{event1.end_time} ({event1.task_name})")
+        print(f"   • Event 2: {event2.start_time}-{event2.end_time} ({event2.task_name})")
+        print(f"   • Overlap detected: {is_conflict}")
+    
+    # ========================================================================
     # STEP 10: Export Schedule
     # ========================================================================
     print("\n" + "="*70)
@@ -324,7 +441,7 @@ def main():
     # Final Summary
     # ========================================================================
     print("\n" + "="*70)
-    print("✅ TESTING COMPLETE!")
+    print("✅ SMART ALGORITHM TESTING COMPLETE!")
     print("="*70)
     print(f"\n✓ Successfully created {owner.get_pet_count()} pets for {owner.name}")
     print(f"✓ Generated daily schedule with {len(schedule.get_events())} events")
