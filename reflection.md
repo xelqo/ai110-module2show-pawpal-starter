@@ -6,6 +6,9 @@
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
+The UML design should be able to have basic pet info input, personalized tasks for each pet and subseqeunt priority establishment of the tasks. The user should then get a detailed schedule thats easy to follow and be given reasoning on why the schedule makes sense, mainly accounting for and adhearing to all the constraints.
+
+I would include am Owner, Pet, constraints, Task, and Scheduler classes. The pet and owner info is just basic info, constraints are the specific constraints like there is snow or walks can only happen at certain times. Tasks are the things that need to happen for the pet every day. Scheduler takes account for all of this and is responseible for using the constraints and tasks to map the most optimal schedule while also providing reasoning. 
 
 **b. Design changes**
 
