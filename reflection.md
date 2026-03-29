@@ -14,7 +14,7 @@ I would include am Owner, Pet, constraints, Task, and Scheduler classes. The pet
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
-
+I had a empty sketon with a lot of the functions being just passed but after going back was able to implement alot of the logic after asking for real implementations. 
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
