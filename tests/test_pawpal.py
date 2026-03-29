@@ -527,6 +527,213 @@ class TestScheduler:
 # Integration Tests
 # ============================================================================
 
+# ============================================================================
+# Smart Algorithm Tests (Phase 5)
+# ============================================================================
+
+class TestSmartAlgorithms:
+    """Test suite for smart scheduling algorithms."""
+    
+    def test_sort_tasks_by_time_chronological_order(self):
+        """Test that sort_tasks_by_time() returns tasks in chronological order."""
+        owner = Owner("Alice", "alice@test.com", "555-1234", "Engineer", "owner_1")
+        pet = Pet("Max", "dog", 3, 65.0, "pet_1", daily_activity_minutes=60)
+        owner.add_pet(pet)
+        
+        # Add tasks in random order
+        task_afternoon = Task("Play", "14:00", "daily", duration_minutes=30, priority="high")
+        task_morning = Task("Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        task_evening = Task("Feed", "18:00", "daily", duration_minutes=20, priority="high")
+        
+        pet.add_task(task_afternoon)
+        pet.add_task(task_morning)
+        pet.add_task(task_evening)
+        
+        scheduler = Scheduler(owner, Constraints())
+        sorted_tasks = scheduler.sort_tasks_by_time()
+        
+        # Verify sorting
+        assert sorted_tasks[0].time == "07:00"
+        assert sorted_tasks[1].time == "14:00"
+        assert sorted_tasks[2].time == "18:00"
+    
+    def test_sort_tasks_empty_list(self):
+        """Test that sorting an empty task list returns empty list."""
+        owner = Owner("Bob", "bob@test.com", "555-5678", "Teacher", "owner_2")
+        pet = Pet("Whiskers", "cat", 2, 10.0, "pet_2", daily_activity_minutes=30)
+        owner.add_pet(pet)
+        
+        scheduler = Scheduler(owner, Constraints())
+        sorted_tasks = scheduler.sort_tasks_by_time()
+        
+        assert len(sorted_tasks) == 0
+    
+    def test_filter_tasks_by_status_complete_vs_incomplete(self):
+        """Test that filter_tasks_by_status correctly separates tasks."""
+        owner = Owner("Sarah", "sarah@test.com", "555-9999", "Vet", "owner_3")
+        pet1 = Pet("Max", "dog", 3, 65.0, "pet_1", daily_activity_minutes=60)
+        pet2 = Pet("Whiskers", "cat", 2, 10.0, "pet_2", daily_activity_minutes=30)
+        owner.add_pet(pet1)
+        owner.add_pet(pet2)
+        
+        # Create tasks
+        task1 = Task("Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        task2 = Task("Play", "14:00", "daily", duration_minutes=30, priority="high")
+        task3 = Task("Feed", "08:00", "daily", duration_minutes=10, priority="high")
+        
+        pet1.add_task(task1)
+        pet1.add_task(task2)
+        pet2.add_task(task3)
+        
+        # Mark some complete
+        task1.mark_complete()
+        task3.mark_complete()
+        
+        scheduler = Scheduler(owner, Constraints())
+        
+        incomplete = scheduler.filter_tasks_by_status(completed=False)
+        completed = scheduler.filter_tasks_by_status(completed=True)
+        
+        assert len(incomplete) == 1
+        assert len(completed) == 2
+        assert task2 in incomplete
+        assert task1 in completed
+        assert task3 in completed
+    
+    def test_filter_tasks_by_pet_isolation(self):
+        """Test that filter_tasks_by_pet returns only specified pet's tasks."""
+        owner = Owner("Mike", "mike@test.com", "555-7777", "Engineer", "owner_4")
+        dog = Pet("Buddy", "dog", 4, 70.0, "pet_1", daily_activity_minutes=60)
+        cat = Pet("Mittens", "cat", 2, 8.0, "pet_2", daily_activity_minutes=30)
+        owner.add_pet(dog)
+        owner.add_pet(cat)
+        
+        dog_task1 = Task("Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        dog_task2 = Task("Play", "14:00", "daily", duration_minutes=30, priority="high")
+        cat_task1 = Task("Feed", "08:00", "daily", duration_minutes=10, priority="high")
+        
+        dog.add_task(dog_task1)
+        dog.add_task(dog_task2)
+        cat.add_task(cat_task1)
+        
+        scheduler = Scheduler(owner, Constraints())
+        
+        dog_tasks = scheduler.filter_tasks_by_pet("Buddy")
+        cat_tasks = scheduler.filter_tasks_by_pet("Mittens")
+        nonexistent = scheduler.filter_tasks_by_pet("NonExistent")
+        
+        assert len(dog_tasks) == 2
+        assert len(cat_tasks) == 1
+        assert len(nonexistent) == 0
+        assert dog_task1 in dog_tasks
+        assert dog_task2 in dog_tasks
+        assert cat_task1 in cat_tasks
+    
+    def test_recurring_task_auto_creation(self):
+        """Test that mark_task_complete creates new task for recurring tasks."""
+        owner = Owner("Anna", "anna@test.com", "555-3333", "Doctor", "owner_5")
+        pet = Pet("Rex", "dog", 2, 50.0, "pet_1", daily_activity_minutes=60)
+        owner.add_pet(pet)
+        
+        daily_task = Task("Morning Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        pet.add_task(daily_task)
+        
+        initial_count = len(pet.get_tasks())
+        assert initial_count == 1
+        
+        scheduler = Scheduler(owner, Constraints())
+        scheduler.mark_task_complete("Rex", "Morning Walk")
+        
+        final_count = len(pet.get_tasks())
+        assert final_count == 2
+        
+        # Verify original is complete
+        completed = [t for t in pet.get_tasks() if t.is_complete()]
+        incomplete = [t for t in pet.get_tasks() if not t.is_complete()]
+        
+        assert len(completed) == 1
+        assert len(incomplete) == 1
+        assert incomplete[0].time == "07:00"
+        assert incomplete[0].frequency == "daily"
+    
+    def test_recurring_weekly_tasks(self):
+        """Test that weekly recurring tasks also auto-create."""
+        owner = Owner("Chris", "chris@test.com", "555-4444", "Nurse", "owner_6")
+        pet = Pet("Fluffy", "cat", 3, 12.0, "pet_1", daily_activity_minutes=30)
+        owner.add_pet(pet)
+        
+        weekly_task = Task("Grooming", "10:00", "weekly", duration_minutes=60, priority="high")
+        pet.add_task(weekly_task)
+        
+        scheduler = Scheduler(owner, Constraints())
+        scheduler.mark_task_complete("Fluffy", "Grooming")
+        
+        # Weekly tasks should also auto-create
+        assert len(pet.get_tasks()) == 2
+    
+    def test_conflict_detection_with_multiple_events(self):
+        """Test that conflicts are properly detected in a multi-event schedule."""
+        schedule = Schedule("2025-03-29")
+        
+        event1 = ScheduleEvent("Walk", "07:00", "07:30", "Park", "exercise", "high")
+        event2 = ScheduleEvent("Feed", "07:30", "07:45", "Home", "feeding", "high")
+        event3 = ScheduleEvent("Play", "08:00", "08:30", "Park", "exercise", "medium")
+        
+        # All events should be addable without conflicts
+        assert schedule.add_event(event1) is True
+        assert schedule.add_event(event2) is True
+        assert schedule.add_event(event3) is True
+        
+        # Try conflicting event
+        conflict_event = ScheduleEvent("Treat", "07:15", "07:35", "Home", "feeding", "medium")
+        assert schedule.add_event(conflict_event) is False
+    
+    def test_edge_case_single_task(self):
+        """Test system behavior with a single task."""
+        owner = Owner("Diana", "diana@test.com", "555-6666", "Writer", "owner_7")
+        pet = Pet("Spot", "dog", 1, 30.0, "pet_1", daily_activity_minutes=45)
+        owner.add_pet(pet)
+        
+        task = Task("Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        pet.add_task(task)
+        
+        scheduler = Scheduler(owner, Constraints())
+        
+        # Sort should work
+        sorted_tasks = scheduler.sort_tasks_by_time()
+        assert len(sorted_tasks) == 1
+        
+        # Filter should work
+        incomplete = scheduler.filter_tasks_by_status(completed=False)
+        assert len(incomplete) == 1
+    
+    def test_edge_case_same_time_different_pets(self):
+        """Test handling of tasks at same time from different pets."""
+        owner = Owner("Eve", "eve@test.com", "555-8888", "Manager", "owner_8")
+        pet1 = Pet("Dog1", "dog", 2, 50.0, "pet_1", daily_activity_minutes=60)
+        pet2 = Pet("Dog2", "dog", 2, 50.0, "pet_2", daily_activity_minutes=60)
+        owner.add_pet(pet1)
+        owner.add_pet(pet2)
+        
+        # Same time, different pets
+        task1 = Task("Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        task2 = Task("Walk", "07:00", "daily", duration_minutes=30, priority="high")
+        
+        pet1.add_task(task1)
+        pet2.add_task(task2)
+        
+        scheduler = Scheduler(owner, Constraints())
+        all_tasks = scheduler.get_all_tasks()
+        
+        assert len(all_tasks) == 2
+        assert task1 in all_tasks
+        assert task2 in all_tasks
+
+
+# ============================================================================
+# Integration Tests
+# ============================================================================
+
 class TestIntegration:
     """Integration tests for the complete PawPal system."""
     
